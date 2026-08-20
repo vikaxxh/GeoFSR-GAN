@@ -4,28 +4,14 @@ import os
 import torch
 import torchvision.transforms.functional as TF
 from PIL import Image
-from fastapi import FastAPI, File, UploadFile, HTTPException, Query
-from fastapi.responses import Response, JSONResponse
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from models import GeoFSRGenerator, LightweightSegmentationUNet
 from evaluation import calculate_psnr, calculate_ssim, compute_miou, tensor_to_numpy
 from .schemas import HealthResponse, MetricsRequest, MetricsResponse
-
-app = FastAPI(
-    title="GeoFSR-GAN API",
-    description="Production REST API for GeoFSR-GAN Satellite Super-Resolution & Downstream Segmentation",
-    version="1.0.0"
-)
-
-# Enable CORS for Streamlit / React frontends
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 GENERATOR = None
@@ -47,9 +33,27 @@ def load_models():
         SEG_HEAD.eval()
 
 
-@app.on_event("startup")
-def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     load_models()
+    yield
+
+
+app = FastAPI(
+    title="GeoFSR-GAN API",
+    description="Production REST API for GeoFSR-GAN Satellite Super-Resolution & Downstream Segmentation",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Enable CORS for Streamlit / React frontends
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health", response_model=HealthResponse)

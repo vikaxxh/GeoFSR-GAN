@@ -3,11 +3,11 @@ from typing import Optional, List, Dict, Any
 
 
 class HealthResponse(BaseModel):
-    status: str = Field(..., example="healthy")
-    version: str = Field(..., example="1.0.0")
-    device: str = Field(..., example="cpu")
-    model_loaded: bool = Field(..., example=True)
-    scale_factor: int = Field(..., example=4)
+    status: str = Field(..., json_schema_extra={"example": "healthy"})
+    version: str = Field(..., json_schema_extra={"example": "1.0.0"})
+    device: str = Field(..., json_schema_extra={"example": "cpu"})
+    model_loaded: bool = Field(..., json_schema_extra={"example": True})
+    scale_factor: int = Field(..., json_schema_extra={"example": 4})
 
 
 class MetricsRequest(BaseModel):
@@ -16,6 +16,6 @@ class MetricsRequest(BaseModel):
 
 
 class MetricsResponse(BaseModel):
-    psnr_db: float = Field(..., example=22.16)
-    ssim: float = Field(..., example=0.3471)
-    miou: float = Field(..., example=1.0000)
+    psnr_db: float = Field(..., json_schema_extra={"example": 22.16})
+    ssim: float = Field(..., json_schema_extra={"example": 0.3471})
+    miou: float = Field(..., json_schema_extra={"example": 1.0000})

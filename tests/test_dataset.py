@@ -4,7 +4,7 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 from datasets import SatelliteDataset
-from scripts.prepare_dataset import generate_synthetic_satellite_image
+from scripts.tools.prepare_dataset import generate_synthetic_satellite_image
 
 
 @pytest.fixture(scope="module")
