@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Project Data & Outputs
+data/sample_dataset/
+data/*.png
+data/*.jpg
+experiments/
+*.pth
+*.pt
+*.onnx
+
+# Testing & Logs
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+runs/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+*.swp

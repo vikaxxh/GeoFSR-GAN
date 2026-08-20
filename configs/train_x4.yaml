@@ -1,0 +1,58 @@
+# Scale x4 Training Configuration
+
+project:
+  name: "GeoFSR-GAN-x4"
+  seed: 42
+  device: "auto"
+
+dataset:
+  name: "SpaceNet_Satellite_x4"
+  data_dir: "data/spacenet"
+  scale: 4
+  hr_patch_size: 128
+  lr_patch_size: 32
+  subset_size: null
+  num_workers: 4
+  pin_memory: true
+
+degradation:
+  blur_kernel_size: 7
+  blur_sigma_min: 0.2
+  blur_sigma_max: 2.0
+  use_motion_blur: true
+  noise_type: "mixed"
+  noise_std_max: 0.05
+  jpeg_quality_min: 50
+  jpeg_quality_max: 95
+  color_jitter_prob: 0.3
+
+model:
+  scale: 4
+  in_channels: 3
+  out_channels: 3
+  spatial_encoder:
+    num_blocks: 6
+    num_features: 64
+  frequency_encoder:
+    wavelet: "bior2.2"
+    levels: 2
+  fusion:
+    type: "attention"
+
+training:
+  batch_size: 8
+  epochs: 50
+  lr: 0.0001
+  betas: [0.9, 0.999]
+  checkpoint_dir: "experiments/train_x4/checkpoints"
+  log_dir: "experiments/train_x4/logs"
+  save_freq: 5
+
+losses:
+  lambda_pixel: 1.0
+  lambda_freq: 0.5
+  lambda_edge: 0.1
+  lambda_perceptual: 0.1
+  lambda_seg: 0.05
+  lambda_adv_spatial: 0.005
+  lambda_adv_frequency: 0.005

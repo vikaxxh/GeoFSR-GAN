@@ -1,0 +1,41 @@
+# GeoFSR-GAN Ablation: No Differentiable Sobel Edge Loss
+project:
+  name: "GeoFSR-GAN-Ablation-NoSobel"
+  seed: 42
+  device: "cpu"
+
+dataset:
+  data_dir: "data/sample_dataset"
+  scale: 4
+  hr_patch_size: 96
+  subset_size: 5
+  train_split: 0.8
+
+model:
+  scale: 4
+  in_channels: 3
+  out_channels: 3
+  spatial_encoder:
+    num_features: 32
+    num_blocks: 2
+  fusion:
+    type: "attention"
+  upsampler: "pixelshuffle"
+
+losses:
+  lambda_pixel: 1.0
+  lambda_freq: 1.0
+  lambda_edge: 0.0
+  lambda_perceptual: 0.1
+  lambda_adv_spatial: 0.005
+  lambda_adv_frequency: 0.005
+  lambda_seg: 0.05
+  perceptual_mode: "lightweight"
+
+training:
+  epochs: 1
+  batch_size: 2
+  lr: 0.0002
+  betas: [0.9, 0.999]
+  checkpoint_dir: "experiments/ablations/no_sobel/checkpoints"
+  log_dir: "experiments/ablations/no_sobel/logs"

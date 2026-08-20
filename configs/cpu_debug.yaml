@@ -1,0 +1,64 @@
+# CPU Debug Configuration for GeoFSR-GAN
+
+project:
+  name: "GeoFSR-GAN-CPU-Debug"
+  seed: 42
+  device: "cpu"
+
+dataset:
+  name: "SpaceNet_Satellite_Debug"
+  data_dir: "data/sample_dataset"
+  scale: 4
+  hr_patch_size: 96
+  lr_patch_size: 24
+  subset_size: 10
+  num_workers: 0
+  pin_memory: false
+
+degradation:
+  blur_kernel_size: 5
+  blur_sigma_min: 0.5
+  blur_sigma_max: 1.5
+  use_motion_blur: false
+  noise_type: "gaussian"
+  noise_std_max: 0.03
+  jpeg_quality_min: 60
+  jpeg_quality_max: 90
+  color_jitter_prob: 0.2
+
+model:
+  scale: 4
+  in_channels: 3
+  out_channels: 3
+  spatial_encoder:
+    num_blocks: 2
+    num_features: 32
+  frequency_encoder:
+    wavelet: "haar"
+    levels: 1
+  fusion:
+    type: "concat"
+
+training:
+  batch_size: 1
+  epochs: 1
+  lr: 0.0002
+  betas: [0.9, 0.999]
+  checkpoint_dir: "experiments/cpu_debug/checkpoints"
+  log_dir: "experiments/cpu_debug/logs"
+  save_freq: 1
+
+losses:
+  lambda_pixel: 1.0
+  lambda_freq: 0.5
+  frequency_subband_weights:
+    w_ll: 1.0
+    w_lh: 2.0
+    w_hl: 2.0
+    w_hh: 3.0
+  lambda_edge: 0.1
+  lambda_perceptual: 0.0
+  perceptual_mode: "lightweight"
+  lambda_seg: 0.0
+  lambda_adv_spatial: 0.001
+  lambda_adv_frequency: 0.001
