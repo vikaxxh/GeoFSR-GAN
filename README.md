@@ -80,17 +80,23 @@ GeoGan/
 │   └── streamlit_app.py        # Streamlit GIS visual comparison workspace
 ├── configs/                    # YAML Configurations
 │   ├── base.yaml               # Full training configuration
+│   ├── baseline.yaml           # Benchmark baseline configuration
 │   ├── cpu_debug.yaml          # CPU development configuration
 │   └── ablations/              # Ablation study configuration variants
 ├── datasets/                   # PyTorch Dataset & Degradation Modules
 │   ├── spacenet.py             # SpaceNet satellite imagery dataset loader
-│   ├── degradation.py          # Realistic degradation pipeline (Blur, Noise, JPEG)
+│   ├── degradation.py          # Controlled degradation pipeline D1-D4 (Blur, Noise, JPEG)
 │   └── transforms.py           # Paired spatial data augmentations
 ├── evaluation/                 # Metrics & Evaluation Utilities
 │   ├── image_metrics.py        # PSNR, SSIM, LPIPS calculations
-│   ├── segmentation_eval.py    # mIoU and Dice score utilities
+│   ├── segmentation_eval.py    # mIoU, Dice, Precision, Recall, Boundary F1 utilities
 │   ├── robustness.py           # Perturbation operators (Noise, Blur, Compression)
 │   └── visualization.py        # Comparison grid plotting
+├── experiments/                # Benchmark Logs & CSV Artifacts
+│   ├── benchmark_report.md     # Full publication-grade benchmark report
+│   ├── master_benchmark.csv    # Master 8-model benchmark results
+│   ├── results.csv             # Iterative experiment tracking log (E00 - E08)
+│   └── evaluation_results/     # High-resolution comparison PNG grids
 ├── losses/                     # Differentiable Loss Modules
 │   ├── frequency_loss.py       # Multi-Band DWT Wavelet Loss
 │   ├── sobel_loss.py           # Differentiable Sobel Edge Loss
@@ -106,91 +112,34 @@ GeoGan/
 │   ├── discriminator_spatial.py# Spatial PatchGAN Discriminator
 │   ├── discriminator_frequency.py # Frequency PatchGAN Discriminator
 │   └── segmentation_head.py    # Lightweight UNet Segmentation Head
-├── scripts/                    # Command-Line Execution Scripts
-│   ├── train_geofsr.py         # Full GeoFSR-GAN training pipeline
-│   ├── evaluate_geofsr.py      # Quantitative benchmark evaluation script
-│   ├── run_ablations.py        # Automated ablation study runner
-│   └── run_robustness_tests.py # Perturbation robustness test suite
+├── scripts/                    # Command-Line Execution & Milestone Ablation Scripts
+│   ├── run_milestone8_master_benchmark.py # Master 8-model evaluation script
+│   ├── run_milestone7_loss_ablation.py    # Multi-loss ablation script
+│   ├── run_milestone6_fusion_ablation.py  # Spatial-frequency fusion ablation script
+│   ├── run_milestone5_comparison.py       # DWT frequency branch ablation script
+│   ├── train_improved_spatial_sr.py       # RRDB spatial SR training
+│   ├── verify_dwt.py                      # 2D Haar DWT exactness unit test
+│   └── train_geofsr.py                    # Full GeoFSR-GAN training pipeline
 ├── tests/                      # Automated PyTest Test Suite (63 Tests)
-├── Dockerfile                  # Container build instructions
-├── docker-compose.yml          # Container orchestration (API + UI)
-├── BENCHMARK_REPORT.md         # Detailed quantitative benchmark report
+├── benchmark_report.md         # Comprehensive benchmark report
 ├── PAPER_ABSTRACT.md           # Research paper abstract & summary
 └── IMPLEMENTATION_STATUS.md    # Development milestone tracker
 ```
 
 ---
 
-## ⚡ Quick Start Guide
+## 📊 Reproducible Master Benchmark Summary (8 Model Variants)
 
-### 1. Environment Installation
-
-```bash
-# Clone repository
-git clone https://github.com/vikash/GeoGan.git
-cd GeoGan
-
-# Create virtual environment & install dependencies
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 2. Run Test Suite (63 Passed)
-
-```bash
-pytest tests/ -v
-```
-
-### 3. Model Training & Evaluation
-
-```bash
-# Train GeoFSR-GAN model
-python scripts/train_geofsr.py --config configs/cpu_debug.yaml
-
-# Evaluate model against baselines
-python scripts/evaluate_geofsr.py --config configs/cpu_debug.yaml
-
-# Run full ablation study
-python scripts/run_ablations.py
-
-# Run perturbation robustness benchmark
-python scripts/run_robustness_tests.py
-```
-
-### 4. FastAPI REST Backend Service
-
-```bash
-# Start FastAPI backend
-uvicorn api.main:app --host 0.0.0.0 --port 8000
-
-# Open API Documentation in browser
-# http://localhost:8000/docs
-```
-
-### 5. Streamlit Web Dashboard ("GeoSR")
-
-```bash
-# Launch interactive Streamlit UI
-streamlit run app/streamlit_app.py
-```
-
-### 6. Docker Deployment
-
-```bash
-# Build and run containers via Docker Compose
-docker-compose up --build
-```
-
----
-
-## 📊 Benchmark Summary
-
-| Model / Variant | PSNR (dB) ↑ | SSIM ↑ | Downstream mIoU ↑ |
-|---|:---:|:---:|:---:|
-| **Bicubic Baseline** | 22.23 | 0.3581 | 1.0000 |
-| **Spatial SR Baseline** | 18.74 | 0.1983 | 1.0000 |
-| **GeoFSR-GAN (Full Model)** | **22.16** | **0.3471** | **1.0000** |
+| Model Variant | Parameters | CPU Latency | PSNR ↑ | SSIM ↑ | Downstream mIoU ↑ | Downstream Dice ↑ | Boundary F1 ↑ |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Nearest Neighbor** | 0 | 0.09 ms | 21.84 dB | 0.3313 | 0.8072 | 0.8870 | 0.5380 |
+| **Bicubic Baseline** | 0 | 0.44 ms | 22.14 dB | 0.3457 | 0.8074 | 0.8872 | 0.5576 |
+| **Lanczos Baseline** | 0 | 0.54 ms | 22.14 dB | 0.3434 | 0.8076 | 0.8873 | 0.5586 |
+| **Initial Spatial SR** | 186,723 | 3.66 ms | 22.12 dB | 0.3394 | 0.8103 | 0.8890 | 0.5595 |
+| **Improved Spatial SR** *(RRDB)* | 2,511,747 | 40.55 ms | **22.17 dB** | **0.3461** | 0.8080 | 0.8876 | 0.5577 |
+| **Spatial+Freq (Concat)** | 2,632,579 | 33.69 ms | 22.15 dB | 0.3457 | 0.8088 | 0.8881 | 0.5601 |
+| **Spatial+Freq (Cross-Attn)** | 2,636,803 | 27.38 ms | 22.13 dB | 0.3452 | **0.8107** | **0.8892** | **0.5632** |
+| **GeoFSR-GAN (Full Model)** | 568,195 | 13.18 ms | 22.08 dB | 0.3388 | 0.8093 | 0.8884 | 0.5608 |
 
 ---
 
