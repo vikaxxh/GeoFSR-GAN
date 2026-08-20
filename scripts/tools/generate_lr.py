@@ -6,7 +6,7 @@ from PIL import Image
 import torchvision.transforms.functional as TF
 import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from datasets import RealisticDegradation
 
 

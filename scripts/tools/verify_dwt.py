@@ -3,7 +3,7 @@ import sys
 import torch
 import torch.nn.functional as F
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from models.frequency_encoder import DWT2D, IDWT2D
 from losses.frequency_loss import MultiBandFrequencyLoss

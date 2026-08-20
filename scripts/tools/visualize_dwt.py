@@ -8,7 +8,7 @@ import torch
 import torchvision.transforms.functional as TF
 from PIL import Image
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from models import DWT2D
 from datasets import SatelliteDataset

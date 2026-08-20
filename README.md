@@ -113,13 +113,23 @@ GeoGan/
 │   ├── discriminator_frequency.py # Frequency PatchGAN Discriminator
 │   └── segmentation_head.py    # Lightweight UNet Segmentation Head
 ├── scripts/                    # Command-Line Execution & Milestone Ablation Scripts
-│   ├── run_milestone8_master_benchmark.py # Master 8-model evaluation script
-│   ├── run_milestone7_loss_ablation.py    # Multi-loss ablation script
-│   ├── run_milestone6_fusion_ablation.py  # Spatial-frequency fusion ablation script
-│   ├── run_milestone5_comparison.py       # DWT frequency branch ablation script
-│   ├── train_improved_spatial_sr.py       # RRDB spatial SR training
-│   ├── verify_dwt.py                      # 2D Haar DWT exactness unit test
-│   └── train_geofsr.py                    # Full GeoFSR-GAN training pipeline
+│   ├── benchmarks/             # Benchmark evaluation runners
+│   │   ├── run_master_benchmark.py      # Master 8-model evaluation script
+│   │   ├── run_loss_ablation.py         # Multi-loss ablation script
+│   │   ├── run_fusion_ablation.py       # Spatial-frequency fusion ablation script
+│   │   ├── run_dwt_ablation.py          # DWT frequency branch ablation script
+│   │   ├── run_spatial_sr_ablation.py   # Spatial SR baseline ablation script
+│   │   ├── run_degradation_ablation.py  # D1-D4 degradation ablation script
+│   │   ├── run_baseline_benchmark.py    # Standard baseline evaluation script
+│   │   └── evaluate_geofsr.py           # Quantitative evaluation entrypoint
+│   ├── training/               # Training pipelines
+│   │   ├── train_geofsr.py              # Full GeoFSR-GAN training pipeline
+│   │   ├── train_improved_spatial_sr.py # RRDB spatial SR training
+│   │   └── train_spatial_frequency_sr.py# Spatial-frequency SR training
+│   └── tools/                  # Verification & visual diagnostic utilities
+│       ├── verify_dwt.py                # 2D Haar DWT exactness unit test
+│       ├── visualize_dwt.py             # DWT subband visualizer
+│       └── visualize_edges.py           # Sobel edge filter visualizer
 ├── tests/                      # Automated PyTest Test Suite (63 Tests)
 ├── benchmark_report.md         # Comprehensive benchmark report
 ├── PAPER_ABSTRACT.md           # Research paper abstract & summary

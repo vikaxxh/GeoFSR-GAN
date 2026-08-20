@@ -5,7 +5,7 @@ import argparse
 import yaml
 import torch
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from models import GeoFSRGenerator
 from datasets import SatelliteDataset

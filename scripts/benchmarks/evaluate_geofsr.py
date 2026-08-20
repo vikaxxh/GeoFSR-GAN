@@ -5,7 +5,7 @@ import yaml
 import torch
 from torch.utils.data import DataLoader
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from datasets import SatelliteDataset
 from models import BicubicBaseline, SimpleSpatialSR, GeoFSRGenerator

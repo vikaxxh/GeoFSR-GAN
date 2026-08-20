@@ -8,7 +8,7 @@ from torchvision.utils import save_image, make_grid
 import torchvision.transforms.functional as TF
 
 # Add project root to path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from datasets import SatelliteDataset
 
