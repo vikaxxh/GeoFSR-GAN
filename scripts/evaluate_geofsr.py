@@ -8,13 +8,37 @@ from torch.utils.data import DataLoader
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from datasets import SatelliteDataset
-from models import BicubicBaseline, SimpleSpatialSR, GeoFSRGenerator, LightweightSegmentationUNet
-from evaluation import calculate_psnr, calculate_ssim, compute_miou, save_comparison_grid
+from models import BicubicBaseline, SimpleSpatialSR, GeoFSRGenerator
+from evaluation import (
+    calculate_psnr,
+    calculate_ssim,
+    calculate_lpips,
+    compute_miou,
+    compute_dice_score,
+    compute_precision_recall,
+    compute_boundary_f1,
+    generate_ground_truth_mask,
+    get_trained_segmentation_net,
+    save_segmentation_audit_grid
+)
+
+
+def set_seed(seed=42):
+    import random
+    import numpy as np
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 def evaluate_all(config_path, model_path=None):
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
+
+    seed = config["project"].get("seed", 42)
+    set_seed(seed)
 
     device = torch.device("cpu")
 
@@ -53,7 +77,8 @@ def evaluate_all(config_path, model_path=None):
     else:
         print(f"[Evaluation] Using initial GeoFSR model weights.")
 
-    seg_head = LightweightSegmentationUNet(in_channels=3, num_classes=1, num_features=16)
+    # Load calibrated segmentation network for downstream evaluation
+    seg_head = get_trained_segmentation_net(device=device, save_path="experiments/segmentation_head.pth", dataset=val_dataset)
 
     bicubic.eval()
     spatial_sr.eval()
@@ -61,17 +86,14 @@ def evaluate_all(config_path, model_path=None):
     seg_head.eval()
 
     # Metrics containers
-    metrics = {
-        "Bicubic": {"psnr": 0.0, "ssim": 0.0, "miou": 0.0},
-        "Spatial SR": {"psnr": 0.0, "ssim": 0.0, "miou": 0.0},
-        "GeoFSR-GAN": {"psnr": 0.0, "ssim": 0.0, "miou": 0.0}
-    }
+    models = ["Bicubic", "Spatial SR", "GeoFSR-GAN"]
+    metrics = {m: {"psnr": 0.0, "ssim": 0.0, "lpips": 0.0, "miou": 0.0, "dice": 0.0, "prec": 0.0, "rec": 0.0, "bf1": 0.0} for m in models}
 
     output_dir = "experiments/evaluation_results"
     os.makedirs(output_dir, exist_ok=True)
 
     print(f"\n=======================================================")
-    print(f"      GeoFSR-GAN Comprehensive Benchmark Evaluation     ")
+    print(f"   Milestone 1 — Comprehensive Benchmark Evaluation    ")
     print(f"=======================================================\n")
 
     with torch.no_grad():
@@ -79,56 +101,72 @@ def evaluate_all(config_path, model_path=None):
             lr = batch["lr"]
             hr = batch["hr"]
 
-            sr_bicubic = bicubic(lr)
-            sr_spatial = spatial_sr(lr)
-            sr_geofsr = geofsr(lr)
+            # Ground-truth binary target mask
+            gt_mask = generate_ground_truth_mask(hr)
 
-            # Metrics
-            metrics["Bicubic"]["psnr"] += calculate_psnr(sr_bicubic, hr)
-            metrics["Bicubic"]["ssim"] += calculate_ssim(sr_bicubic, hr)
+            sr_dict = {
+                "Bicubic": bicubic(lr),
+                "Spatial SR": spatial_sr(lr),
+                "GeoFSR-GAN": geofsr(lr)
+            }
 
-            metrics["Spatial SR"]["psnr"] += calculate_psnr(sr_spatial, hr)
-            metrics["Spatial SR"]["ssim"] += calculate_ssim(sr_spatial, hr)
+            mask_dict = {}
+            for name, sr in sr_dict.items():
+                pred_mask = torch.sigmoid(seg_head(sr))
+                mask_dict[name] = pred_mask
 
-            metrics["GeoFSR-GAN"]["psnr"] += calculate_psnr(sr_geofsr, hr)
-            metrics["GeoFSR-GAN"]["ssim"] += calculate_ssim(sr_geofsr, hr)
+                metrics[name]["psnr"] += calculate_psnr(sr, hr)
+                metrics[name]["ssim"] += calculate_ssim(sr, hr)
+                
+                lp_score = calculate_lpips(sr, hr)
+                metrics[name]["lpips"] += (lp_score if lp_score is not None else 0.0)
 
-            # Downstream segmentation mIoU
-            mask_hr = torch.sigmoid(seg_head(hr))
-            metrics["Bicubic"]["miou"] += compute_miou(torch.sigmoid(seg_head(sr_bicubic)), mask_hr)
-            metrics["Spatial SR"]["miou"] += compute_miou(torch.sigmoid(seg_head(sr_spatial)), mask_hr)
-            metrics["GeoFSR-GAN"]["miou"] += compute_miou(torch.sigmoid(seg_head(sr_geofsr)), mask_hr)
+                metrics[name]["miou"] += compute_miou(pred_mask, gt_mask)
+                metrics[name]["dice"] += compute_dice_score(pred_mask, gt_mask)
+                prec, rec = compute_precision_recall(pred_mask, gt_mask)
+                metrics[name]["prec"] += prec
+                metrics[name]["rec"] += rec
+                metrics[name]["bf1"] += compute_boundary_f1(pred_mask, gt_mask)
 
             if idx == 0:
-                # Save visual grid comparison
-                images_dict = {
-                    "LR (Bicubic x4)": sr_bicubic[0],
-                    "Spatial SR": sr_spatial[0],
-                    "GeoFSR-GAN": sr_geofsr[0],
-                    "Ground Truth HR": hr[0]
-                }
-                grid_path = os.path.join(output_dir, "geofsr_comparison_grid.png")
-                save_comparison_grid(images_dict, save_path=grid_path)
-                print(f"[Grid Saved] Visual evaluation grid saved to '{grid_path}'.")
+                # Save Milestone 1 Audit Grid
+                sample_m_bicubic = {k: metrics["Bicubic"][k] / 1.0 for k in ["miou", "dice", "prec", "rec", "bf1"]}
+                sample_m_spatial = {k: metrics["Spatial SR"][k] / 1.0 for k in ["miou", "dice", "prec", "rec", "bf1"]}
+                sample_m_geofsr = {k: metrics["GeoFSR-GAN"][k] / 1.0 for k in ["miou", "dice", "prec", "rec", "bf1"]}
+
+                grid_path = os.path.join(output_dir, "segmentation_audit_grid.png")
+                save_segmentation_audit_grid(
+                    hr=hr[0], bicubic=sr_dict["Bicubic"][0], spatial_sr=sr_dict["Spatial SR"][0], geofsr=sr_dict["GeoFSR-GAN"][0],
+                    gt_mask=gt_mask[0], mask_bicubic=mask_dict["Bicubic"][0], mask_spatial=mask_dict["Spatial SR"][0], mask_geofsr=mask_dict["GeoFSR-GAN"][0],
+                    metrics_bicubic=sample_m_bicubic, metrics_spatial=sample_m_spatial, metrics_geofsr=sample_m_geofsr,
+                    save_path=grid_path
+                )
 
     n_samples = len(val_loader)
-    print("\n--- Final Quantitative Benchmark Metrics ---")
-    print(f"{'Model':<15} | {'PSNR (dB)':<10} | {'SSIM':<10} | {'Segmentation mIoU':<18}")
-    print("-" * 65)
+    print("\n--- Milestone 1 Quantitative Benchmark Summary ---")
+    print(f"{'Model':<12} | {'PSNR ↑':<8} | {'SSIM ↑':<8} | {'LPIPS ↓':<8} | {'mIoU ↑':<8} | {'Dice ↑':<8} | {'Prec ↑':<8} | {'Rec ↑':<8} | {'Bound F1 ↑':<10}")
+    print("-" * 95)
 
-    for name, m in metrics.items():
+    for name in models:
+        m = metrics[name]
         psnr_avg = m["psnr"] / n_samples
         ssim_avg = m["ssim"] / n_samples
+        lpips_avg = m["lpips"] / n_samples
         miou_avg = m["miou"] / n_samples
-        print(f"{name:<15} | {psnr_avg:<10.2f} | {ssim_avg:<10.4f} | {miou_avg:<18.4f}")
+        dice_avg = m["dice"] / n_samples
+        prec_avg = m["prec"] / n_samples
+        rec_avg = m["rec"] / n_samples
+        bf1_avg = m["bf1"] / n_samples
 
-    print("-" * 65)
+        print(f"{name:<12} | {psnr_avg:<8.2f} | {ssim_avg:<8.4f} | {lpips_avg:<8.4f} | {miou_avg:<8.4f} | {dice_avg:<8.4f} | {prec_avg:<8.4f} | {rec_avg:<8.4f} | {bf1_avg:<10.4f}")
+
+    print("-" * 95)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate GeoFSR-GAN against Baselines.")
-    parser.add_argument("--config", type=str, default="configs/cpu_debug.yaml", help="Path to config file.")
-    parser.add_argument("--model_path", type=str, default="experiments/cpu_debug/checkpoints/geofsr_generator_latest.pth", help="Path to checkpoint.")
+    parser = argparse.ArgumentParser(description="Milestone 1 — Audit Evaluation Pipeline.")
+    parser.add_argument("--config", type=str, default="configs/baseline.yaml", help="Path to config file.")
+    parser.add_argument("--model_path", type=str, default="experiments/baseline/checkpoints/geofsr_generator_latest.pth", help="Path to checkpoint.")
     args = parser.parse_args()
 
     evaluate_all(args.config, args.model_path)

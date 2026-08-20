@@ -59,10 +59,6 @@ def save_baseline_comparison(lr, bicubic, spatial_sr, hr, save_path, sample_idx=
 def save_comparison_grid(images_dict, save_path):
     """
     Saves a grid figure comparing arbitrary model output tensors.
-    
-    Args:
-        images_dict: Dictionary mapping panel title strings to image PyTorch Tensors [C, H, W] or [1, C, H, W]
-        save_path: File path to save output grid image
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     num_panels = len(images_dict)
@@ -80,3 +76,68 @@ def save_comparison_grid(images_dict, save_path):
     plt.tight_layout()
     plt.savefig(save_path, bbox_inches="tight")
     plt.close(fig)
+
+
+def save_segmentation_audit_grid(
+    hr, bicubic, spatial_sr, geofsr,
+    gt_mask, mask_bicubic, mask_spatial, mask_geofsr,
+    metrics_bicubic, metrics_spatial, metrics_geofsr,
+    save_path="experiments/evaluation_results/segmentation_audit_grid.png"
+):
+    """
+    Milestone 1 Visualization Grid:
+    Row 1: HR Image | Bicubic Image | Spatial SR Image | GeoFSR-GAN Image
+    Row 2: Ground-Truth Mask | Bicubic Pred Mask | Spatial SR Pred Mask | GeoFSR-GAN Pred Mask
+    With overlaid mIoU, Dice, Precision, Recall, and Boundary F1 score metrics.
+    """
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+
+    fig, axes = plt.subplots(2, 4, figsize=(20, 9), dpi=150)
+    fig.suptitle("Milestone 1 — Downstream Segmentation & Visual Quality Audit Grid", fontsize=16, fontweight="bold", y=0.98)
+
+    # Row 1: Images
+    axes[0, 0].imshow(tensor_to_numpy(hr))
+    axes[0, 0].set_title("Ground-Truth HR Image", fontsize=11, fontweight="bold")
+    axes[0, 0].axis("off")
+
+    axes[0, 1].imshow(tensor_to_numpy(bicubic))
+    axes[0, 1].set_title("Bicubic Baseline Image", fontsize=11, fontweight="bold")
+    axes[0, 1].axis("off")
+
+    axes[0, 2].imshow(tensor_to_numpy(spatial_sr))
+    axes[0, 2].set_title("Spatial SR Baseline Image", fontsize=11, fontweight="bold")
+    axes[0, 2].axis("off")
+
+    axes[0, 3].imshow(tensor_to_numpy(geofsr))
+    axes[0, 3].set_title("GeoFSR-GAN Image", fontsize=11, fontweight="bold")
+    axes[0, 3].axis("off")
+
+    # Row 2: Binary Masks
+    gt_mask_np = tensor_to_numpy(gt_mask)
+    if gt_mask_np.ndim == 3:
+        gt_mask_np = gt_mask_np[:, :, 0]
+
+    axes[1, 0].imshow(gt_mask_np, cmap="gray")
+    axes[1, 0].set_title("Ground-Truth Target Mask", fontsize=11, fontweight="bold")
+    axes[1, 0].axis("off")
+
+    # Helper format string
+    def fmt(m):
+        return f"mIoU: {m['miou']:.4f} | Dice: {m['dice']:.4f}\nPrec: {m['prec']:.4f} | Rec: {m['rec']:.4f}\nBound F1: {m['bf1']:.4f}"
+
+    axes[1, 1].imshow(tensor_to_numpy(mask_bicubic if mask_bicubic.dim()==3 else mask_bicubic[0]), cmap="gray")
+    axes[1, 1].set_title(f"Bicubic Pred Mask\n{fmt(metrics_bicubic)}", fontsize=9)
+    axes[1, 1].axis("off")
+
+    axes[1, 2].imshow(tensor_to_numpy(mask_spatial if mask_spatial.dim()==3 else mask_spatial[0]), cmap="gray")
+    axes[1, 2].set_title(f"Spatial SR Pred Mask\n{fmt(metrics_spatial)}", fontsize=9)
+    axes[1, 2].axis("off")
+
+    axes[1, 3].imshow(tensor_to_numpy(mask_geofsr if mask_geofsr.dim()==3 else mask_geofsr[0]), cmap="gray")
+    axes[1, 3].set_title(f"GeoFSR-GAN Pred Mask\n{fmt(metrics_geofsr)}", fontsize=9)
+    axes[1, 3].axis("off")
+
+    plt.tight_layout()
+    plt.savefig(save_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"[Visualization] Milestone 1 audit grid saved to '{save_path}'.")

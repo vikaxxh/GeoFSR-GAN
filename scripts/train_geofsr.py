@@ -26,12 +26,25 @@ from losses import (
 from evaluation import calculate_psnr, calculate_ssim, compute_miou
 
 
+def set_seed(seed=42):
+    import random
+    import numpy as np
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
 def train_geofsr(config_path):
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
+    seed = config["project"].get("seed", 42)
+    set_seed(seed)
+
     device = torch.device("cuda" if torch.cuda.is_available() and config["project"]["device"] == "cuda" else "cpu")
-    print(f"[GeoFSR Training] Using device: {device}")
+    print(f"[GeoFSR Training] Fixed Random Seed: {seed} | Device: {device}")
 
     # 1. Dataset & DataLoaders
     dataset_cfg = config["dataset"]
