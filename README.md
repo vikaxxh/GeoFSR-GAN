@@ -130,10 +130,12 @@ GeoGan/
 │       ├── verify_dwt.py                # 2D Haar DWT exactness unit test
 │       ├── visualize_dwt.py             # DWT subband visualizer
 │       └── visualize_edges.py           # Sobel edge filter visualizer
-├── tests/                      # Automated PyTest Test Suite (63 Tests)
-├── benchmark_report.md         # Comprehensive benchmark report
-├── PAPER_ABSTRACT.md           # Research paper abstract & summary
-└── IMPLEMENTATION_STATUS.md    # Development milestone tracker
+├── docs/                       # Comprehensive Documentation & Research
+│   ├── README.md               # Documentation directory index
+│   ├── benchmark_report.md     # Full publication-grade benchmark report
+│   ├── PAPER_ABSTRACT.md       # Research paper abstract & summary
+│   ├── IMPLEMENTATION_STATUS.md# Development milestone tracker
+│   └── literature.md           # Literature review & references
 ```
 
 ---
